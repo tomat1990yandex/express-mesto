@@ -19,7 +19,7 @@ const getProfile = (req, res) => {
   User.findById(req.user._id)
     .then((user) => {
       if (!user) {
-        res.status(404).send({ message: 'Пользователь с таким id не найден' });
+        res.status(404).send({ message: 'Запрашиваемый пользователь не найден' });
       }
       res.status(200).send({ data: user });
     })
@@ -35,8 +35,39 @@ const createUser = (req, res) => {
     .catch((err) => checkDataError(res, err));
 };
 
+const getMyProfile = (req, res) => {
+  User.findById(req.user._id)
+    .then((user) => res.send(user))
+    .catch((err) => checkDataError(res, err));
+};
+
+const updateProfile = (req, res) => {
+  const { name, about } = req.body;
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name, about },
+    { new: true},
+  )
+    .then((user) => res.status(200).send(user))
+    .catch((err) => checkDataError(res, err));
+};
+
+const updateAvatar = (req, res) => {
+  const { avatar } = req.body;
+  User.findByIdAndUpdate(
+    req.user._id,
+    { avatar },
+    { new: true},
+  )
+    .then((user) => res.status(200).send(user))
+    .catch((err) => checkDataError(res, err));
+};
+
 module.exports = {
   getUsers,
   getProfile,
-  createUser
+  createUser,
+  getMyProfile,
+  updateProfile,
+  updateAvatar,
 };
