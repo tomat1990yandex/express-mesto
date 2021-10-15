@@ -3,8 +3,8 @@ const path = require('path');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
-const usersRoutes = require('./routes/users.js');
-const cardsRoutes = require('./routes/cards.js');
+const usersRoutes = require('./routes/users');
+const cardsRoutes = require('./routes/cards');
 
 const { PORT = 3000 } = process.env;
 
@@ -21,11 +21,10 @@ app.use((req, res, next) => {
 });
 
 mongoose.connect('mongodb://localhost:27017/mestodb',
-  async(err)=>{
-    if(err) throw err;
-    console.log("conncted to db")
-  }
-)
+  async (err) => {
+    if (err) throw err;
+    console.log('conncted to db');
+  });
 
 app.use(express.static(path.join(__dirname, '/public')));
 app.use('/', cardsRoutes);
