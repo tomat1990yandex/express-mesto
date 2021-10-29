@@ -2,53 +2,52 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
-const checkDataError = (res, err) => {
-  if (err.name === 'ValidationError' || err.name === 'CastError') {
-    return res
-      .status(400)
-      .send({ message: `Переданы некорректные данные: ${err}` });
-  }
-  return res.status(500).send({ message: `Произошла ошибка на сервере: ${err}` });
-};
+const { NotFoundError } = require('../errors/notFoundError');
+const { ConflictError } = require('../errors/conflictError');
+const { ValidationError } = require('../errors/validationError');
 
-const getUsers = (req, res) => {
+const getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.status(200).send(users))
-    .catch((err) => checkDataError(res, err));
+    .catch((err) => next(err));
 };
 
-const getProfile = (req, res) => {
+const getProfile = (req, res, next) => {
   User.findById(req.params.id)
     .then((user) => {
       if (!user) {
-        res.status(404).send({ message: 'Запрашиваемый пользователь не найден' });
+        throw new NotFoundError('Запрашиваемый пользователь не найден');
       }
       res.status(200).send({ data: user });
     })
-    .catch((err) => checkDataError(res, err));
+    .catch((err) => next(err));
 };
 
-const createUser = (req, res) => {
-  bcrypt.hash(req.body.password, 10)
-    .then((_hash) => User.create({
-      name: req.body.name,
-      about: req.body.about,
-      avatar: req.body.avatar,
-      email: req.body.email,
-      password: _hash,
+const createUser = (req, res, next) => {
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+  bcrypt
+    .hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
     }))
     .then((user) => {
       res.status(200).send({ user });
     })
-    .catch((err) => checkDataError(res, err));
+    .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
+      }
+      next(err);
+    });
 };
-
-const loginUser = (req, res) => {
+const loginUser = (req, res, next) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400).send({ message: 'Пароль и email обязательны!' });
-  }
   User.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign(
@@ -56,39 +55,54 @@ const loginUser = (req, res) => {
         'super-crypto-strong-passphrase',
         { expiresIn: '7d' },
       );
-      res.status(200).send({ token });
+      return res.status(200).send({ token });
     })
     .catch((err) => {
-      res.status(401).send({ message: err.message });
+      next(err);
     });
 };
 
-const getMyProfile = (req, res) => {
+const getMyProfile = (req, res, next) => {
   User.findById(req.user._id)
-    .then((user) => res.send(user))
-    .catch((err) => checkDataError(res, err));
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Данные пользователя не найдены');
+      }
+      res.status(200).send(user);
+    })
+    .catch((err) => next(err));
 };
 
-const updateProfile = (req, res) => {
+const updateProfile = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
     { name, about },
     { new: true, runValidators: true },
   )
-    .then((user) => res.status(200).send(user))
-    .catch((err) => checkDataError(res, err));
+    .then((user) => {
+      if (!user) {
+        throw new ValidationError('Переданы не корректные данные');
+      }
+      res.status(200).send(user);
+    })
+    .catch((err) => next(err));
 };
 
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
     { avatar },
     { new: true, runValidators: true },
   )
-    .then((user) => res.status(200).send(user))
-    .catch((err) => checkDataError(res, err));
+    .then((user) => {
+      if (!user) {
+        throw new ValidationError('Переданы не корректные данные');
+      }
+      res.status(200).send(user);
+    })
+    .catch((err) => next(err));
 };
 
 module.exports = {
