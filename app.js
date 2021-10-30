@@ -7,7 +7,8 @@ const usersRoutes = require('./routes/users');
 const cardsRoutes = require('./routes/cards');
 
 const { loginUser, createUser } = require('./controllers/usersController');
-const { auth } = require('./middlewares/auth');
+const auth = require('./middlewares/auth');
+const { NotFoundError } = require('./errors/notFoundError');
 
 const { PORT = 3000 } = process.env;
 
@@ -42,8 +43,8 @@ mongoose.connect('mongodb://localhost:27017/mestodb',
 
 app.use('/users', auth, usersRoutes);
 app.use('/cards', auth, cardsRoutes);
-app.use('*', (req, res) => {
-  res.status(404).send({ message: 'Страница не найдена' });
+app.use('*', (req, res, next) => {
+  next(new NotFoundError('Страница не найдена'));
 });
 
 app.use(errors());

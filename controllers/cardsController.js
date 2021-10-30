@@ -1,6 +1,7 @@
 const Card = require('../models/card');
-const { ForbiddenError } = require('../errors/notFoundError');
+const { ForbiddenError } = require('../errors/forbiddenError');
 const { NotFoundError } = require('../errors/notFoundError');
+const { ValidationError } = require('../errors/validationError');
 
 const getCards = (req, res, next) => {
   Card.find({})
@@ -13,7 +14,13 @@ const createCard = (req, res, next) => {
   const owner = req.user._id;
   Card.create({ name, link, owner })
     .then((card) => res.status(200).send({ body: card }))
-    .catch((err) => next(err));
+    .catch((err) => {
+      if (err.name === 'validationError') {
+        throw new ValidationError('Переданы не корректные данные');
+      }
+      res.status(500).send({ message: `Внутренняя ошибка сервера: ${err}` });
+    })
+    .catch(next);
 };
 
 const deleteCard = (req, res, next) => {

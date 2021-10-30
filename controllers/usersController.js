@@ -36,12 +36,19 @@ const createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then((user) => {
-      res.status(200).send({ user });
+    .then(() => {
+      res.status(200).send({
+        data: {
+          name, about, avatar, email,
+        },
+      });
     })
     .catch((err) => {
-      if (err.name === 'MongoError' && err.code === 11000) {
-        next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
+      if (err.name === 'ValidationError') {
+        throw new ValidationError('Переданы не корректные данные');
+      }
+      if (err.name === 'MongoServerError' && err.code === 11000) {
+        throw new ConflictError('Пользователь с таким email уже зарегистрирован');
       }
       next(err);
     });
