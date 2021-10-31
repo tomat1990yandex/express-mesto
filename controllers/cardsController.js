@@ -18,7 +18,7 @@ const createCard = (req, res, next) => {
       if (err.name === 'validationError') {
         throw new ValidationError('Переданы не корректные данные');
       }
-      res.status(500).send({ message: `Внутренняя ошибка сервера: ${err}` });
+      next(err);
     })
     .catch(next);
 };

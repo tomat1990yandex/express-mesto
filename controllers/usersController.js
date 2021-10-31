@@ -45,10 +45,10 @@ const createUser = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new ValidationError('Переданы не корректные данные');
+        next(new ValidationError('Переданы не корректные данные'));
       }
       if (err.name === 'MongoServerError' && err.code === 11000) {
-        throw new ConflictError('Пользователь с таким email уже зарегистрирован');
+        next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
       }
       next(err);
     });
